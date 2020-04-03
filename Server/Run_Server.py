@@ -4,7 +4,7 @@ from Server.Database import Database
 
 db = Database()
 db.unactive_all()
-server_socket, inputs = creating_server()
+server_socket = creating_server()
 
 while True:
-    activating_server(server_socket, inputs, db)
+    activating_server(server_socket, db)

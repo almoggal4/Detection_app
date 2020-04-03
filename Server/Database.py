@@ -2,16 +2,16 @@ import sqlite3
 import os
 import psutil
 
-DB_Current_Path = r"C:\Users\almog\.PyCharmCE2018.3\config\programming\Detection_App\Server\DB"
-Current_Working_Directory = r'C:\Users\almog\.PyCharmCE2018.3\config\programming\Detection_App\Server\Run_Server.py'
-Db_Path = r"C:\Users\almog\.PyCharmCE2018.3\config\programming\Detection_App\Server\DB\Users.db"
+DB_Current_Path = r"C:\Users\almog\AppData\Local\Programs\Python\Python37\programming\Detection_app\Server\DB"
+Current_Working_Directory = r'C:\Users\almog\AppData\Local\Programs\Python\Python37\programming\Detection_app\Server\Run_Server.py'
+Db_Path = r"C:\Users\almog\AppData\Local\Programs\Python\Python37\programming\Detection_app\Server\DB\Users.db"
 
 
 class Database:
     def __init__(self, db_location=Db_Path):
         self.conn = sqlite3.connect(db_location)
         self.cur = self.conn.cursor()
-        self.cur.execute("CREATE TABLE IF NOT EXISTS Info (username text, password text, path text, active text)")
+        self.cur.execute("CREATE TABLE IF NOT EXISTS Info (username text, password text, path text, active text, history_folders text)")
         self.conn.commit()
 
     def fetch(self):
@@ -24,8 +24,8 @@ class Database:
         if self.cur.fetchone() is not None:
                 return False
 
-        self.cur.execute("INSERT INTO Info VALUES (? , ?, ?, ?)",
-                            (username, password, self.generate_path(username), "n"))
+        self.cur.execute("INSERT INTO Info VALUES (? , ?, ?, ?, ?)",
+                            (username, password, self.generate_path(username), "n", ""))
 
         self.conn.commit()
         return True
@@ -101,6 +101,27 @@ class Database:
                 return paths[i][0]
         return None
 
+    def insert_user_history_folder(self, username, folder_name):
+        self.cur.execute("SELECT username FROM Info")
+        usernames = self.cur.fetchall()
+        self.cur.execute("SELECT history_folders FROM Info")
+        history_folders = self.cur.fetchall()
+        for i in range(len(usernames)):
+            if usernames[i][0] == username:
+                if history_folders[i][0]:  # just to make it cleaner
+                    # split with forward slash because it illegal to contain this charcter in a path.
+                    all_folders = history_folders[i][0] + "\\" + folder_name
+                else:
+                    all_folders = folder_name
+                self.cur.execute("UPDATE Info SET history_folders = ? WHERE username = ?", (all_folders, username))
+                self.conn.commit()
+
+    def get_history_folders(self, username):
+        self.cur.execute("SELECT history_folders FROM Info")
+        history_folders = self.cur.fetchall()
+        folder_list = (history_folders[0][0]).split('\\')
+        return folder_list
+
     def _del_(self):
         self.conn.close()
 
@@ -108,11 +129,13 @@ class Database:
 if __name__ == '__main__':
 
     db = Database("DB\\test.db")
-    db.insert("almog_test1", "123")
-    db.active_user("almog_test1")
     db.insert("almog_test2", "123")
-    db.active_user("almog_test2")
-    db.active_user("almog_test2")
-    db.unactive_all()
+    db.insert_user_history_folder("almog_test2", "Trump0")
+    db.insert_user_history_folder("almog_test2", "Trump1")
+    db.insert_user_history_folder("almog_test2", "Trump2")
+    lst1 = db.get_history_folders("almog_test2")
     db._del_()
-    print(db.running())
+    lst2 = os.listdir(r'C:\Users\almog\AppData\Local\Programs\Python\Python37\programming\Detection_app\Server\DB\almog')
+    print(lst1, lst2)
+    result = list(set(lst2) - set(lst1))
+    print(result, type(result))
